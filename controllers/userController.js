@@ -40,7 +40,7 @@ const register = async (req, res) => {
     let info = await transporter.sendMail({
       from: process.env.SMTP_USERNAME,
       to: user.email,
-      subject: "KITCHEN-RECIPE-MANAGEMENT - Account Activation",
+      subject: "URL-SHORTENER - Account Activation",
       text: `Welcome to our application! Please click the following link to activate your account: ${process.env.APP_URL}/activate/${activationToken}`,
       html: `<p>Welcome to our application!</p><p>Please click the following link to activate your account: <a href="${process.env.APP_URL}/activate/${activationToken}">Activate Account</a></p>`,
     });
@@ -140,7 +140,7 @@ const forgotPassword = async (req, res) => {
     let info = await transporter.sendMail({
       from: process.env.SMTP_USERNAME,
       to: user.email,
-      subject: "KITCHEN-RECIPE-MANAGEMENT - Reset Password",
+      subject: "URL-SHORTENER - Reset Password",
       text: `You are receiving this because you have requested the reset of the password of your account.\n\nToken: ${token}\n\nIf you didn't request this, please ignore this email and your password will remain unchanged.`,
       html: `<p>You are receiving this because you have requested the reset of the password of your account.</p><p><strong>Token: ${token}</strong></p><p>If you didn't request this, please ignore this email and your password will remain unchanged.</p>`,
     });
@@ -187,7 +187,7 @@ const resetPassword = async (req, res) => {
     let info = await transporter.sendMail({
       from: process.env.SMTP_USERNAME,
       to: user.email,
-      subject: "KITCHEN-RECIPE-MANAGEMENT - Password Reset Successful",
+      subject: "URL-SHORTENER - Password Reset Successful",
       text: `Your password has been reset successfully. You can now log in with your new password.`,
       html: `<p>Your password has been reset successfully.</p><p>You can now log in with your new password.</p>`,
     });
