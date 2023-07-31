@@ -14,4 +14,6 @@ router.get('/chart', urlController.getChartData);
 
 router.get('/dashboard', urlController.getDashboardData);
 
+router.delete('/urls/:id', urlController.deleteUrl);
+
 module.exports = router;
