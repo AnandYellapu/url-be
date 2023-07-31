@@ -132,10 +132,35 @@ const getChartData = async (req, res) => {
 };
 
 
+const deleteUrl = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Use the `Url` model to find the document by id and delete it
+    const url = await Url.findById(id);
+    if (!url) {
+      return res.status(404).json({ message: 'URL not found' });
+    }
+
+    // Check user role for delete access
+    if (!isAdmin(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    await url.remove();
+
+    return res.status(200).json({ message: 'URL deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 module.exports = {
   createUrl,
   getUrlList,
   updateClickCount,
   getDashboardData,
   getChartData,
+  deleteUrl,
 };
