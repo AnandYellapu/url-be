@@ -141,11 +141,6 @@ const deleteUrl = async (req, res) => {
       return res.status(404).json({ message: 'URL not found' });
     }
 
-    // Check user role for delete access
-    if (!isAdmin(req.user.role)) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
     await url.remove();
 
     return res.status(200).json({ message: 'URL deleted successfully' });
