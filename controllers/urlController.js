@@ -136,12 +136,10 @@ const deleteUrl = async (req, res) => {
   const { id } = req.params;
   try {
     // Use the `Url` model to find the document by id and delete it
-    const url = await Url.findById(id);
+    const url = await Url.findByIdAndDelete(id);
     if (!url) {
       return res.status(404).json({ message: 'URL not found' });
     }
-
-    await url.remove();
 
     return res.status(200).json({ message: 'URL deleted successfully' });
   } catch (error) {
