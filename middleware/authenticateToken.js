@@ -1,18 +1,21 @@
 const jwt = require('jsonwebtoken');
 
 const authenticateToken = (req, res, next) => {
-  const token = req.headers.authorization;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Missing authentication token' });
+  const authHeader = req.header('Authorization');
+  
+  if (!authHeader) {
+    return res.status(403).json({ message: 'Authentication token missing' });
   }
 
+  const token = authHeader.split(' ')[1]; // Extract only the token, removing "Bearer"
+  
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.id; // Updated from `userId` to `id`
+    req.userId = decoded.id || null;
     next();
   } catch (error) {
-    return res.status(403).json({ error: 'Invalid or expired authentication token' });
+    console.error('Error in authentication middleware:', error);
+    return res.status(403).json({ message: 'Invalid or expired authentication token' });
   }
 };
 

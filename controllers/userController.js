@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const User = require('../models/user');
 
+
 const register = async (req, res) => {
   const { username, email, password } = req.body;
 
@@ -77,6 +78,8 @@ const activateAccount = async (req, res) => {
   }
 };
 
+
+
 const login = async (req, res) => {
   const { identifier, password } = req.body;
 
@@ -99,17 +102,27 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Account not activated yet' });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+    // Include the userId and role in the token payload
+    const tokenPayload = {
+      id: user._id,
+      role: user.role,
+    };
 
-    res.status(200).json({ user, token });
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET);
+
+    // Include the userId and role in the response
+    res.status(200).json({
+      user: {
+        _id: user._id,
+        // Include other user properties as needed
+      },
+      token,
+    });
   } catch (error) {
+    console.error('Error during login:', error);
     res.status(500).json({ error: 'Failed to login' });
   }
 };
-
-
-
-
 
 
 const forgotPassword = async (req, res) => {
