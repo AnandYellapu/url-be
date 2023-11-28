@@ -1,3 +1,28 @@
+// const mongoose = require('mongoose');
+
+// const urlSchema = new mongoose.Schema(
+//     {
+//     shortURL: String,
+//   longURL: String,
+//     clickCount: {
+//       type: Number, default: 0
+//     },
+//   _id: {
+//     type: Date,
+//     default: Date.now,
+//     },
+//   createdAt: {
+//     type: Date,
+//     default: Date.now,
+//   },
+// });
+
+// const Url = mongoose.model('Url', urlSchema);
+
+// module.exports = Url;
+
+
+
 const mongoose = require('mongoose');
 
 const urlSchema = new mongoose.Schema({
@@ -7,13 +32,9 @@ const urlSchema = new mongoose.Schema({
   copyCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  // Assuming ObjectId and a reference to the User model
 });
 
 const Url = mongoose.model('Url', urlSchema);
 
 module.exports = Url;
-
-
-
 

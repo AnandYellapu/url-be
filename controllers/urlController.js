@@ -171,6 +171,7 @@ const getChartData = async (req, res) => {
 
 
 
+
 // url of particular users
 const getChartForUser = async (req, res) => {
   try {
@@ -235,3 +236,4 @@ module.exports = {
   getChartForUser,
   deleteUrl,
 };
+
