@@ -4,12 +4,14 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const User = require('../models/user');
 
-
 const register = async (req, res) => {
   const { username, email, password } = req.body;
 
   try {
+    console.log('Received registration request:', { username, email }); // Log request data
+
     const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('Password hashed successfully');
 
     // Create an inactive user account
     const user = await User.create({
@@ -18,6 +20,7 @@ const register = async (req, res) => {
       password: hashedPassword,
       isActivated: false, // Set the isActivated property to false initially
     });
+    console.log('User created:', user); // Log user data
 
     // Generate an activation token
     const activationToken = crypto.randomBytes(20).toString('hex');
@@ -26,12 +29,11 @@ const register = async (req, res) => {
 
     // Save the user with the activation token and expiration
     await user.save();
+    console.log('User saved with activation token:', user.activationToken); // Log activation token
 
     // Code for sending the activation email
     let transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: true,
+      service: 'gmail',
       auth: {
         user: process.env.SMTP_USERNAME,
         pass: process.env.SMTP_PASSWORD,
@@ -45,12 +47,15 @@ const register = async (req, res) => {
       text: `Welcome to our application! Please click the following link to activate your account: ${process.env.APP_URL}/activate/${activationToken}`,
       html: `<p>Welcome to our application!</p><p>Please click the following link to activate your account: <a href="${process.env.APP_URL}/activate/${activationToken}">Activate Account</a></p>`,
     });
+    console.log('Activation email sent:', info); // Log email sent information
 
     res.status(201).json({ message: 'User registered successfully. Activation email sent.' });
   } catch (error) {
+    console.error('Error registering user:', error); // Log error
     res.status(500).json({ error: 'Failed to register user' });
   }
 };
+
 
 
 const activateAccount = async (req, res) => {
@@ -77,6 +82,7 @@ const activateAccount = async (req, res) => {
     res.status(500).json({ error: 'Failed to activate account' });
   }
 };
+
 
 
 
@@ -124,26 +130,28 @@ const login = async (req, res) => {
   }
 };
 
-
 const forgotPassword = async (req, res) => {
-  const token = crypto.randomBytes(20).toString('hex');
-  const user = await User.findOne({ email: req.body.email });
-
-  if (!user) {
-    return res.status(400).json({ error: 'No user with such email!' });
-  }
-
-  user.resetPasswordToken = token;
-  user.resetPasswordExpires = Date.now() + 3600000;
+  const { email } = req.body;
 
   try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Generate a password reset token
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    const resetTokenExpires = Date.now() + 3600000; // Token expiration time (1 hour)
+
+    // Update user document with reset token and expiration
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetTokenExpires;
     await user.save();
 
-    // Code for sending the reset password email goes here (similar to how it was done before)
+    // Send password reset email
     let transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: true,
+      service: 'gmail',
       auth: {
         user: process.env.SMTP_USERNAME,
         pass: process.env.SMTP_PASSWORD,
@@ -153,66 +161,92 @@ const forgotPassword = async (req, res) => {
     let info = await transporter.sendMail({
       from: process.env.SMTP_USERNAME,
       to: user.email,
-      subject: "URL-SHORTENER - Reset Password",
-      text: `You are receiving this because you have requested the reset of the password of your account.\n\nToken: ${token}\n\nIf you didn't request this, please ignore this email and your password will remain unchanged.`,
-      html: `<p>You are receiving this because you have requested the reset of the password of your account.</p><p><strong>Token: ${token}</strong></p><p>If you didn't request this, please ignore this email and your password will remain unchanged.</p>`,
+      subject: 'URL-SHORTENER - Password Reset',
+      text: `You are receiving this email because you (or someone else) have requested the reset of the password for your account.\n\n
+        Please click on the following link, or paste this into your browser to complete the process:\n\n
+        ${process.env.APP_URL}/reset-password/${resetToken}\n\n
+        If you did not request this, please ignore this email and your password will remain unchanged.\n`,
+      html: `<p>You are receiving this email because you (or someone else) have requested the reset of the password for your account.</p>
+        <p>Please click on the following link, or paste this into your browser to complete the process:</p>
+        <p><a href="${process.env.APP_URL}/reset-password/${resetToken}">Reset Password</a></p>
+        <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>`,
     });
 
-    return res.json({
-      message: `An email has been sent to ${user.email} with further instructions`,
-    });
+    console.log('Password reset email sent:', info); // Log email sent information
+
+    res.status(200).json({ message: 'Password reset email sent. Check your inbox.' });
   } catch (error) {
-    return res.status(400).json({ error: error.message });
+    console.error('Error sending password reset email:', error);
+    res.status(500).json({ error: 'Failed to send password reset email' });
   }
 };
 
+
+
+
 const resetPassword = async (req, res) => {
-  const { token, password } = req.body;
+  const { token } = req.params;
+  const { newPassword } = req.body;
 
   try {
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
+    // Find user by reset token
+    const user = await User.findOne({ resetPasswordToken: token });
 
     if (!user) {
-      return res.status(400).json({ error: 'Invalid or expired token' });
+      console.log('User not found or invalid token:', token);
+      return res.status(404).json({ error: 'User not found or invalid token' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Check if the token has expired
+    if (user.resetPasswordExpires < Date.now()) {
+      console.log('Password reset token has expired:', token);
+      return res.status(400).json({ error: 'Password reset token has expired' });
+    }
 
+    // Update password and clear reset token
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
     await user.save();
 
-    // Code for sending the password reset success email goes here (similar to how it was done before)
+    // Send password reset confirmation email
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: true,
+      service: 'gmail',
       auth: {
         user: process.env.SMTP_USERNAME,
         pass: process.env.SMTP_PASSWORD,
       },
     });
 
-    let info = await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: process.env.SMTP_USERNAME,
       to: user.email,
-      subject: "URL-SHORTENER - Password Reset Successful",
-      text: `Your password has been reset successfully. You can now log in with your new password.`,
-      html: `<p>Your password has been reset successfully.</p><p>You can now log in with your new password.</p>`,
+      subject: 'Password Reset Confirmation',
+      text: 'Your password has been successfully reset.',
     });
 
-    res.json({ message: 'Password reset successfully' });
+    console.log('Password reset confirmation email sent:', info);
+
+    console.log('Password reset successful for user:', user.email);
+    return res.status(200).json({ message: 'Password reset successful' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to reset password' });
+    console.error('Error resetting password:', error);
+    
+    // Log specific errors
+    if (error.name === 'ValidationError') {
+      console.error('Validation Error:', error.message);
+      return res.status(400).json({ error: 'Validation Error', message: error.message });
+    }
+
+    return res.status(500).json({ error: 'Failed to reset password' });
   }
 };
+
+
 
 const getProfile = (req, res) => {
   res.status(200).json({ user: req.user });
 };
 
-module.exports = { register, login, forgotPassword, resetPassword, activateAccount, getProfile };
+module.exports = { register, login, activateAccount, forgotPassword, resetPassword, getProfile };

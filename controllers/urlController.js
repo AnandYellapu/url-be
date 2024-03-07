@@ -33,10 +33,12 @@ const shorten = async (url) => {
   }
 };
 
+
+
+
 const createUrl = async (req, res) => {
   try {
-    const { longURL } = req.body;
-    console.log('req.userId:', req.userId); // Ensure userId is logged
+    const { longURL, expiryDate } = req.body; // Extract expiryDate from request body
 
     if (!validUrl.isWebUri(longURL)) {
       return res.status(400).json({ message: 'Invalid URL' });
@@ -52,8 +54,8 @@ const createUrl = async (req, res) => {
     // Use req.userId directly
     const userId = req.userId;
 
-    // Include userId when creating the URL
-    const url = new Url({ longURL, shortURL, userId, createdAt: currentDate });
+    // Include userId and expiryDate when creating the URL
+    const url = new Url({ longURL, shortURL, userId, createdAt: currentDate, expiryDate });
     await url.save();
 
     res.status(201).json({ shortURL });
@@ -78,10 +80,7 @@ const getUrlList = async (req, res) => {
 
 
 
-
-
 // UserUrlList
-
 const userGetUrlList = async (req, res) => {
   try {
     // const userId = req.user.id; // Assuming user information is added to the request by your authentication middleware
@@ -95,7 +94,6 @@ const userGetUrlList = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
-
 
 
 
@@ -172,33 +170,36 @@ const getChartData = async (req, res) => {
 
 
 
-// url of particular users
+
 const getChartForUser = async (req, res) => {
   try {
     const userId = req.userId;
-    const userObjectId = new mongoose.Types.ObjectId(userId); // Use 'new' keyword here
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
     const dailyURLs = await Url.aggregate([
       {
-        $match: { userId: userObjectId }, // Use the created userObjectId
+        $match: { userId: userObjectId }
       },
       {
         $group: {
-          _id: { date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } } },
-          count: { $sum: 1 },
-        },
-      },
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }
+          },
+          count: { $sum: 1 }
+        }
+      }
     ]);
 
     const monthlyURLs = await Url.aggregate([
       {
-        $match: { userId: userObjectId }, // Use the created userObjectId
+        $match: { userId: userObjectId }
       },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-          count: { $sum: 1 },
-        },
-      },
+          count: { $sum: 1 }
+        }
+      }
     ]);
 
     res.status(200).json({ dailyURLs, monthlyURLs });
@@ -207,6 +208,11 @@ const getChartForUser = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+
+
+
+
 
 
 const deleteUrl = async (req, res) => {
@@ -226,6 +232,38 @@ const deleteUrl = async (req, res) => {
 };
 
 
+
+// Function to delete URLs in bulk (admin only)
+const deleteBulkUrls = async (req, res) => {
+  try {
+    // Extract the array of URL IDs from the request body
+    const { urlIds } = req.body;
+
+    // Use the `Url` model to delete multiple URLs by their IDs
+    await Url.deleteMany({ _id: { $in: urlIds } });
+
+    res.status(200).json({ message: 'URLs deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Function to delete all URLs (admin only)
+const deleteAllUrls = async (req, res) => {
+  try {
+    // Use the `Url` model to delete all URLs
+    await Url.deleteMany({});
+
+    res.status(200).json({ message: 'All URLs deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+
 module.exports = {
   createUrl,
   getUrlList,
@@ -235,5 +273,7 @@ module.exports = {
   getChartData,
   getChartForUser,
   deleteUrl,
+  deleteBulkUrls,
+  deleteAllUrls,
 };
 
