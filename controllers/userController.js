@@ -31,7 +31,7 @@ const register = async (req, res) => {
     await user.save();
     console.log('User saved with activation token:', user.activationToken); // Log activation token
 
-    // Code for sending the activation email
+    // // Code for sending the activation email
     let transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -39,21 +39,30 @@ const register = async (req, res) => {
         pass: process.env.SMTP_PASSWORD,
       },
     });
-
+    
     let info = await transporter.sendMail({
       from: process.env.SMTP_USERNAME,
       to: user.email,
       subject: "URL-SHORTENER - Account Activation",
-      text: `Welcome to our application! Please click the following link to activate your account: ${process.env.APP_URL}/activate/${activationToken}`,
-      html: `<p>Welcome to our application!</p><p>Please click the following link to activate your account: <a href="${process.env.APP_URL}/activate/${activationToken}">Activate Account</a></p>`,
+      html: `
+        <div style="background-color: #f7f7f7; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+            <h1 style="color: #333; text-align: center; font-size: 24px; margin-bottom: 20px;">Welcome to Our Application!</h1>
+            <p style="color: #333; font-size: 16px; line-height: 1.5;">Thank you for joining our platform. To activate your account, please click the button below:</p>
+            <div style="text-align: center; margin-top: 20px;">
+              <a href="${process.env.APP_URL}/activate/${activationToken}" style="display: inline-block; background-color: #007bff; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-size: 16px;">Activate Account</a>
+            </div>
+          </div>
+        </div>
+      `,
     });
     console.log('Activation email sent:', info); // Log email sent information
-
+    
     res.status(201).json({ message: 'User registered successfully. Activation email sent.' });
-  } catch (error) {
+    } catch (error) {
     console.error('Error registering user:', error); // Log error
     res.status(500).json({ error: 'Failed to register user' });
-  }
+    }
 };
 
 
@@ -166,11 +175,21 @@ const forgotPassword = async (req, res) => {
         Please click on the following link, or paste this into your browser to complete the process:\n\n
         ${process.env.APP_URL}/reset-password/${resetToken}\n\n
         If you did not request this, please ignore this email and your password will remain unchanged.\n`,
-      html: `<p>You are receiving this email because you (or someone else) have requested the reset of the password for your account.</p>
-        <p>Please click on the following link, or paste this into your browser to complete the process:</p>
-        <p><a href="${process.env.APP_URL}/reset-password/${resetToken}">Reset Password</a></p>
-        <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>`,
+      html: `
+        <div style="background-color: #f7f7f7; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+            <h1 style="color: #333; text-align: center; font-size: 24px; margin-bottom: 20px;">Password Reset Request</h1>
+            <p style="color: #333; font-size: 16px; line-height: 1.5;">You are receiving this email because you (or someone else) have requested the reset of the password for your account.</p>
+            <p style="color: #333; font-size: 16px; line-height: 1.5;">Please click on the following button to reset your password:</p>
+            <div style="text-align: center; margin-top: 20px;">
+              <a href="${process.env.APP_URL}/reset-password/${resetToken}" style="display: inline-block; background-color: #007bff; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-size: 16px;">Reset Password</a>
+            </div>
+            <p style="color: #333; font-size: 16px; line-height: 1.5;">If you did not request this, please ignore this email and your password will remain unchanged.</p>
+          </div>
+        </div>
+      `,
     });
+    
 
     console.log('Password reset email sent:', info); // Log email sent information
 
@@ -248,5 +267,6 @@ const resetPassword = async (req, res) => {
 const getProfile = (req, res) => {
   res.status(200).json({ user: req.user });
 };
+
 
 module.exports = { register, login, activateAccount, forgotPassword, resetPassword, getProfile };
